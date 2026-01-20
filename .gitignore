@@ -1,0 +1,89 @@
+# ==============================================================================
+# BUILD / LOCAL DEV ARTIFACTS
+# ==============================================================================
+.build_trading_lab.stamp
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments (just in case someone creates one locally)
+.venv/
+venv/
+env/
+.env/
+.envrc
+
+# Packaging artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ==============================================================================
+# JUPYTER NOTEBOOKS
+# ==============================================================================
+# Always ignore Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Optional: if you ever want to ignore notebook outputs only, you could switch
+# to nbstripout instead of ignoring entire notebooks.
+# (Currently we keep notebooks versioned.)
+
+# ==============================================================================
+# DATA (LOCAL / DERIVED)
+# ==============================================================================
+# Keep the directory structure but ignore large / reproducible data files
+notebooks/data/*
+!notebooks/data/.gitkeep
+
+# Common data formats you generally do NOT want in Git
+*.csv
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# ==============================================================================
+# EXPERIMENT OUTPUTS (future-proofing)
+# ==============================================================================
+logs/
+runs/
+checkpoints/
+models/
+results/
+outputs/
+mlruns/
+
+# ==============================================================================
+# CACHES
+# ==============================================================================
+.cache/
+.pytest_cache/
+.mypy_cache/
+ruff_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Hugging Face cache (already volume-mounted in Podman)
+.huggingface/
+.cache/huggingface/
+
+# ==============================================================================
+# EDITORS / OS
+# ==============================================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
