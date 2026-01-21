@@ -87,3 +87,4 @@ htmlcov/
 Thumbs.db
 *.swp
 *.swo
+.Trash-*
