@@ -3,25 +3,61 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Base Data Stack
+# Core Python Data Stack
 # ------------------------------------------------------------------------------
-pandas
 numpy
+pandas
 scipy
 polars
 pyarrow
 
 # ------------------------------------------------------------------------------
-# Signal Processing & Statistical Modeling
+# Statistical Modeling & Machine Learning
 # ------------------------------------------------------------------------------
 statsmodels
 scikit-learn
 arch
 
 # ------------------------------------------------------------------------------
-# Finance, Visualization, and Notebooks
+# Market Data & Finance APIs
 # ------------------------------------------------------------------------------
 yfinance
+
+# ------------------------------------------------------------------------------
+# Visualization & Exploratory Research
+# ------------------------------------------------------------------------------
 matplotlib
 seaborn
+
+# ------------------------------------------------------------------------------
+# Notebooks & Interactive Research
+# ------------------------------------------------------------------------------
 jupyterlab
+
+# ------------------------------------------------------------------------------
+# Utilities & Performance
+# ------------------------------------------------------------------------------
+tqdm          # progress bars for rolling backtests / downloads
+joblib        # lightweight parallelization
+rich          # structured console logging
+
+# ------------------------------------------------------------------------------
+# Testing & Quality
+# ------------------------------------------------------------------------------
+pytest
+pytest-cov
+
+# Notebook hygiene (used by Git filter inside container)
+# Not strictly required if you only rely on `jupyter nbconvert`,
+# but useful if you later switch to nbstripout/nbdime tooling.
+nbconvert
+nbdime
+nbstripout
+
+# ------------------------------------------------------------------------------
+# Optional (future-ready, commented out)
+# ------------------------------------------------------------------------------
+# numba        # JIT acceleration
+# cvxpy        # portfolio optimization
+# quantlib     # advanced fixed income / derivatives
+# fredapi      # macroeconomic data

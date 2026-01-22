@@ -1,0 +1,28 @@
+# ==============================================================================
+# Trading Lab — .gitattributes
+# ==============================================================================
+# Goals:
+# - Keep notebook history clean (strip outputs before commit)
+# - Avoid unreadable JSON diffs in Git by default
+# - Keep line endings consistent across OSes
+# - Optionally enable a dedicated notebook diff driver (requires extra setup)
+# ==============================================================================
+
+# Treat notebooks as JSON for GitHub linguist (language stats / display)
+*.ipynb linguist-language=JSON
+
+# Strip notebook outputs on commit using a Git filter named "strip-notebook-output"
+# (configured via `git config filter.strip-notebook-output.*`, executed in Podman)
+*.ipynb filter=strip-notebook-output
+
+# Default: disable notebook diffs (raw JSON diffs are noisy and not review-friendly)
+*.ipynb -diff
+
+# Normalize line endings across platforms
+* text=auto eol=lf
+
+# OPTIONAL: enable a notebook-specific diff driver.
+# This line is intentionally last so you can switch behavior easily:
+# - Keep `*.ipynb -diff` to disable diffs (recommended for simplicity), OR
+# - Comment out `*.ipynb -diff` above and keep the line below to enable diffs.
+*.ipynb diff=jupyternotebook
