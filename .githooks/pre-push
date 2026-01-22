@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-push] Running safety checks..."
+
+# Ensure image exists
+if ! podman image exists trading-lab; then
+  echo "ERROR: Image not built. Run: make build"
+  exit 1
+fi
+
+# Run full test suite
+make test
+
+# Prevent pushing data files
+if git diff --cached --name-only | grep -E '\.(parquet|csv|h5)$'; then
+  echo "ERROR: Attempting to push data files."
+  exit 1
+fi
+
+echo "[pre-push] Push allowed."
