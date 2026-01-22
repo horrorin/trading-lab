@@ -14,10 +14,10 @@ BUILD_STAMP     := .build_trading_lab.stamp
 HF_CACHE_VOLUME := hf_cache_trading
 PODMAN          := podman
 CUDA_CHECK_IMG  := docker.io/nvidia/cuda:12.4.0-devel-ubuntu22.04
-PYTEST_ARGS 	?= -q
-TEST_DIR    	?= tests
-BLACK_ARGS ?= trading_lab tests
-RUFF_ARGS  ?= trading_lab tests
+PYTEST_ARGS     ?= -q
+TEST_DIR        ?= tests
+BLACK_ARGS      ?= trading_lab tests
+RUFF_ARGS       ?= trading_lab tests
 
 # ------------------------------------------------------------------------------
 # Host User Information (for permission consistency)
@@ -45,6 +45,14 @@ PODMAN_RUN_FLAGS := \
     --name $(CONTAINER_NAME) \
     --userns=keep-id \
     --device nvidia.com/gpu=all \
+    --security-opt=label=disable \
+    --volume $(HF_CACHE_VOLUME):/home/quantuser/.cache/huggingface:Z \
+    --volume $(CURDIR):/home/quantuser/trading-lab:rw,Z
+
+PODMAN_RUN_FLAGS_NO_TTY := \
+    --rm \
+    --name $(CONTAINER_NAME) \
+    --userns=keep-id \
     --security-opt=label=disable \
     --volume $(HF_CACHE_VOLUME):/home/quantuser/.cache/huggingface:Z \
     --volume $(CURDIR):/home/quantuser/trading-lab:rw,Z
@@ -133,24 +141,24 @@ clean: ## Remove build stamp and Python caches
 # Run unit tests (pytest) inside the container
 test: build check-podman ## Run test suite with pytest
 	@echo "Running tests (pytest)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
 		python -m pytest $(PYTEST_ARGS) $(TEST_DIR)
 
 # Format codebase using Black
 format: build check-podman ## Auto-format Python code with Black
 	@echo "Formatting code (black)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
 		black $(BLACK_ARGS)
 
 # Lint codebase using Ruff
 lint: build check-podman ## Run Ruff linter
 	@echo "Linting code (ruff)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
 		ruff check $(RUFF_ARGS)
 
 lint-fix: build check-podman ## Run Ruff linter with --fix
 	@echo "Linting code (ruff)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
 		ruff check $(RUFF_ARGS) --fix
 
 check: format lint test ## Run format, lint, and tests
