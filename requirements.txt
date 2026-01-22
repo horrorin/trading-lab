@@ -46,6 +46,8 @@ rich          # structured console logging
 # ------------------------------------------------------------------------------
 pytest
 pytest-cov
+black
+ruff
 
 # Notebook hygiene (used by Git filter inside container)
 # Not strictly required if you only rely on `jupyter nbconvert`,

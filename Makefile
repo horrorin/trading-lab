@@ -14,6 +14,10 @@ BUILD_STAMP     := .build_trading_lab.stamp
 HF_CACHE_VOLUME := hf_cache_trading
 PODMAN          := podman
 CUDA_CHECK_IMG  := docker.io/nvidia/cuda:12.4.0-devel-ubuntu22.04
+PYTEST_ARGS 	?= -q
+TEST_DIR    	?= tests
+BLACK_ARGS ?= trading_lab tests
+RUFF_ARGS  ?= trading_lab tests
 
 # ------------------------------------------------------------------------------
 # Host User Information (for permission consistency)
@@ -126,10 +130,35 @@ clean: ## Remove build stamp and Python caches
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "Workspace cleaned."
 
+# Run unit tests (pytest) inside the container
+test: build check-podman ## Run test suite with pytest
+	@echo "Running tests (pytest)..."
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+		python -m pytest $(PYTEST_ARGS) $(TEST_DIR)
+
+# Format codebase using Black
+format: build check-podman ## Auto-format Python code with Black
+	@echo "Formatting code (black)..."
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+		black $(BLACK_ARGS)
+
+# Lint codebase using Ruff
+lint: build check-podman ## Run Ruff linter
+	@echo "Linting code (ruff)..."
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+		ruff check $(RUFF_ARGS)
+
+lint-fix: build check-podman ## Run Ruff linter with --fix
+	@echo "Linting code (ruff)..."
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) \
+		ruff check $(RUFF_ARGS) --fix
+
+check: format lint test ## Run format, lint, and tests
+
 # Auto-generate help output
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-15s %s\n", $$1, $$2}'
 
-.PHONY: shell notebook info stop clean help
+.PHONY: shell notebook info stop clean test format lint lint-fix check help

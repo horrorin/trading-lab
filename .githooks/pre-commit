@@ -3,51 +3,82 @@ set -euo pipefail
 
 IMG="trading-lab"
 
-# Fail fast if image is missing (keeps workflow deterministic)
+echo "[pre-commit] Running Trading Lab checks..."
+
+# ------------------------------------------------------------------------------
+# Ensure Podman image exists
+# ------------------------------------------------------------------------------
 if ! podman image exists "$IMG" 2>/dev/null; then
   echo "ERROR: Podman image \"$IMG\" not found. Run: make build" >&2
   exit 1
-fi
-
-# Only process staged notebooks (added/modified/copied)
-mapfile -t NOTEBOOKS < <(git diff --cached --name-only --diff-filter=ACM | grep -E '\.ipynb$' || true)
-
-if [[ ${#NOTEBOOKS[@]} -eq 0 ]]; then
-  exit 0
 fi
 
 # Ensure hook runs from repo root
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-# Strip outputs + noisy metadata in-place, then restage.
-# Uses nbstripout inside the container. This keeps host Python-free.
-for nb in "${NOTEBOOKS[@]}"; do
-  # Skip deleted files just in case
-  [[ -f "$nb" ]] || continue
+# ------------------------------------------------------------------------------
+# 1) NOTEBOOK HYGIENE
+# ------------------------------------------------------------------------------
 
-  echo "[pre-commit] Stripping notebook outputs: $nb"
+# Only process staged notebooks (added/modified/copied)
+mapfile -t NOTEBOOKS < <(git diff --cached --name-only --diff-filter=ACM | grep -E '\.ipynb$' || true)
 
-  # Run nbstripout on the file in the working tree (volume-mounted)
-  podman run --rm \
-    --security-opt=label=disable \
-    -v "$REPO_ROOT:/repo:rw,Z" \
-    -w /repo \
-    "$IMG" \
-    sh -c "python -m nbstripout --drop-empty-cells --extra-keys 'metadata.widgets metadata.execution metadata.language_info' '$nb'"
+if [[ ${#NOTEBOOKS[@]} -gt 0 ]]; then
+  # Strip outputs + noisy metadata in-place, then restage.
+  # Uses nbstripout inside the container. This keeps host Python-free.
+  for nb in "${NOTEBOOKS[@]}"; do
+    # Skip deleted files just in case
+    [[ -f "$nb" ]] || continue
 
-  # Restage the cleaned notebook
-  git add "$nb"
-done
+    echo "[pre-commit] Stripping notebook outputs: $nb"
 
-# Optional strict guard: ensure no outputs remain staged (lightweight heuristic).
-# This rejects commit if "outputs" blocks still appear in the staged blob.
-for nb in "${NOTEBOOKS[@]}"; do
-  if git show ":$nb" | grep -q '"outputs": \['; then
-    echo "ERROR: Notebook still contains outputs after stripping: $nb" >&2
-    echo "Fix: open + re-save, or run: git add $nb (after make build) and retry." >&2
-    exit 1
-  fi
-done
+    podman run --rm \
+      --security-opt=label=disable \
+      -v "$REPO_ROOT:/repo:rw,Z" \
+      -w /repo \
+      "$IMG" \
+      sh -c "python -m nbstripout --drop-empty-cells --extra-keys 'metadata.widgets metadata.execution metadata.language_info' '$nb'"
 
+    # Restage the cleaned notebook
+    git add "$nb"
+  done
+
+  # Strict guard: reject commit if "outputs" blocks still appear in the staged blob.
+  for nb in "${NOTEBOOKS[@]}"; do
+    if git show ":$nb" | grep -q '"outputs": \['; then
+      echo "ERROR: Notebook still contains outputs after stripping: $nb" >&2
+      echo "Fix: open + re-save, or run: git add $nb (after make build) and retry." >&2
+      exit 1
+    fi
+  done
+fi
+
+# ------------------------------------------------------------------------------
+# 2) FORMAT / LINT / TESTS (containerized)
+# ------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------
+# Run Python formatting check (Black)
+# ------------------------------------------------------------------------------
+echo "[pre-commit] Checking code format (black)..."
+make format
+
+# ------------------------------------------------------------------------------
+# Run Lint (Ruff)
+# ------------------------------------------------------------------------------
+echo "[pre-commit] Running lint (ruff)..."
+make lint
+
+# ------------------------------------------------------------------------------
+# Run tests (pytest)
+# ------------------------------------------------------------------------------
+echo "[pre-commit] Running tests (pytest)..."
+make test
+
+# ------------------------------------------------------------------------------
+# Success
+# ------------------------------------------------------------------------------
+echo "[pre-commit] All checks passed."
 exit 0
