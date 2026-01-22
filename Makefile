@@ -40,22 +40,17 @@ USERNAME := $(shell whoami)
 # ------------------------------------------------------------------------------
 PODMAN_RUN_FLAGS := \
     --rm \
-    --interactive \
-    --tty \
     --name $(CONTAINER_NAME) \
     --userns=keep-id \
-    --device nvidia.com/gpu=all \
     --security-opt=label=disable \
     --volume $(HF_CACHE_VOLUME):/home/quantuser/.cache/huggingface:Z \
     --volume $(CURDIR):/home/quantuser/trading-lab:rw,Z
 
-PODMAN_RUN_FLAGS_NO_TTY := \
-    --rm \
-    --name $(CONTAINER_NAME) \
-    --userns=keep-id \
-    --security-opt=label=disable \
-    --volume $(HF_CACHE_VOLUME):/home/quantuser/.cache/huggingface:Z \
-    --volume $(CURDIR):/home/quantuser/trading-lab:rw,Z
+PODMAN_RUN_FLAGS_GPU := \
+    $(PODMAN_RUN_FLAGS) \
+    --interactive \
+    --tty \
+    --device nvidia.com/gpu=all
 
 # ==============================================================================
 # Pre-requisite Checks
@@ -105,13 +100,16 @@ rebuild: ## Force a complete rebuild from scratch
 
 # Interactive shell inside the container
 shell: build check-podman check-nvidia ## Open an interactive shell
-	$(PODMAN) run $(PODMAN_RUN_FLAGS) $(IMAGE_NAME) /bin/bash
+	$(PODMAN) run $(PODMAN_RUN_FLAGS_GPU) $(IMAGE_NAME) /bin/bash
 
 # Launch JupyterLab for research
+notebook: CONTAINER_NAME := $(CONTAINER_NAME)-notebook
 notebook: build check-podman check-nvidia ## Start JupyterLab (localhost:8888)
 	@echo "Starting JupyterLab (http://localhost:8888)"
 	@mkdir -p notebooks
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS) -p 8888:8888 $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS_GPU) --name $(CONTAINER_NAME) \
+		-e PYTHONPATH=/home/quantuser/trading-lab \
+		-p 8888:8888 $(IMAGE_NAME) \
 		jupyter lab \
 		--ip=0.0.0.0 \
 		--no-browser \
@@ -128,10 +126,6 @@ info: ## Show project and environment info
 	@$(PODMAN) volume inspect $(HF_CACHE_VOLUME) >/dev/null 2>&1 && \
 		echo "HF Cache: Mounted" || echo "HF Cache: Missing (will be created)"
 
-# Stop running container if exists
-stop: ## Stop and remove active container
-	$(PODMAN) stop $(CONTAINER_NAME) || true
-
 # Clean workspace artifacts
 clean: ## Remove build stamp and Python caches
 	rm -f $(BUILD_STAMP)
@@ -139,26 +133,30 @@ clean: ## Remove build stamp and Python caches
 	@echo "Workspace cleaned."
 
 # Run unit tests (pytest) inside the container
+test: CONTAINER_NAME := $(CONTAINER_NAME)-check
 test: build check-podman ## Run test suite with pytest
 	@echo "Running tests (pytest)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) --name $(CONTAINER_NAME) $(IMAGE_NAME) \
 		python -m pytest $(PYTEST_ARGS) $(TEST_DIR)
 
 # Format codebase using Black
+format: CONTAINER_NAME := $(CONTAINER_NAME)-check
 format: build check-podman ## Auto-format Python code with Black
 	@echo "Formatting code (black)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) --name $(CONTAINER_NAME) $(IMAGE_NAME) \
 		black $(BLACK_ARGS)
 
 # Lint codebase using Ruff
+lint: CONTAINER_NAME := $(CONTAINER_NAME)-check
 lint: build check-podman ## Run Ruff linter
 	@echo "Linting code (ruff)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) --name $(CONTAINER_NAME) $(IMAGE_NAME) \
 		ruff check $(RUFF_ARGS)
 
+lint-fix: CONTAINER_NAME := $(CONTAINER_NAME)-check
 lint-fix: build check-podman ## Run Ruff linter with --fix
 	@echo "Linting code (ruff)..."
-	@$(PODMAN) run $(PODMAN_RUN_FLAGS_NO_TTY) $(IMAGE_NAME) \
+	@$(PODMAN) run $(PODMAN_RUN_FLAGS) --name $(CONTAINER_NAME) $(IMAGE_NAME) \
 		ruff check $(RUFF_ARGS) --fix
 
 check: format lint test ## Run format, lint, and tests
@@ -169,4 +167,4 @@ help: ## Show available commands
 		sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "%-15s %s\n", $$1, $$2}'
 
-.PHONY: shell notebook info stop clean test format lint lint-fix check help
+.PHONY: shell notebook info clean test format lint lint-fix check help
