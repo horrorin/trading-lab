@@ -5,19 +5,25 @@
 # ------------------------------------------------------------------------------
 # Data & Research Outputs (Never Commit Market Data / Cached Files)
 # ------------------------------------------------------------------------------
-data/
-reports/
-*.parquet
-*.csv
-*.h5
-*.feather
+/data/
+/reports/
+
+**/*.parquet
+**/*.csv
+**/*.h5
+**/*.feather
+
+*.zip
+*.tar
+*.gz
+*.7z
 
 # ------------------------------------------------------------------------------
 # Jupyter Notebooks
 # ------------------------------------------------------------------------------
 .ipynb_checkpoints/
-notebooks/_scratch/
-notebooks/**/.ipynb_checkpoints/
+/notebooks/_scratch/
+/notebooks/**/.ipynb_checkpoints/
 
 # ------------------------------------------------------------------------------
 # Python Cache & Build Artifacts
